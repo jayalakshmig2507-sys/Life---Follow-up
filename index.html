@@ -13,7 +13,7 @@
   right: 0;
   width: 0;
   height: 100%;
-  background-color: #111; /* black */
+  background-color: #111;
   color: white;
   overflow-x: hidden;
   transition: width 0.5s ease;
@@ -93,7 +93,7 @@
   <div class="w-2/3 relative flex flex-col">
     <!-- Top Image -->
     <div class="p-4">
-      <img src="https://i.postimg.cc/MnrX2g21/2da0fa98.png" alt="Life Tracker" class="w-full object-contain rounded-lg shadow-md">
+      <img src="https://i.postimg.cc/MnrX2g21/2da0fa98.png" alt="Life Tracker" class="w-3/4 mx-auto object-contain rounded-lg shadow-md">
     </div>
 
     <!-- Calendar Tab (small) -->
@@ -174,20 +174,25 @@ closeCalendar.addEventListener('click', () => calendarPanel.classList.remove('op
 // Save task
 saveTask.addEventListener('click', async () => {
   if(!companyName.value || !followUpDate.value) return alert("Company name and follow-up date required!");
-  await addDoc(collection(db, activeTab), {
-    companyName: companyName.value,
-    jobDescription: jobDescription.value,
-    contactName: contactName.value,
-    contactEmail: contactEmail.value,
-    followUpDate: followUpDate.value,
-    status: status.value,
-    createdAt: serverTimestamp()
-  });
-  companyName.value = jobDescription.value = contactName.value = contactEmail.value = followUpDate.value = '';
-  status.value = 'pending';
+  try {
+    await addDoc(collection(db, activeTab), {
+      companyName: companyName.value,
+      jobDescription: jobDescription.value,
+      contactName: contactName.value,
+      contactEmail: contactEmail.value,
+      followUpDate: followUpDate.value,
+      status: status.value,
+      createdAt: serverTimestamp()
+    });
+    companyName.value = jobDescription.value = contactName.value = contactEmail.value = followUpDate.value = '';
+    status.value = 'pending';
+    console.log("Task saved successfully!");
+  } catch(err) {
+    console.error("Error saving task:", err);
+  }
 });
 
-// Render tasks from Firebase
+// Render tasks
 function renderTasks() {
   if (unsubscribe) unsubscribe();
   const colRef = collection(db, activeTab);
@@ -258,7 +263,6 @@ function generateCalendar() {
 
 // Initial render
 renderTasks();
-
 </script>
 </body>
 </html>
