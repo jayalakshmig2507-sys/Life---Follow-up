@@ -6,16 +6,22 @@
 <title>Life Tracker Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
-  /* Sliding calendar panel */
-  .calendar-panel {
-    transition: transform 0.3s ease-in-out;
-  }
-  .calendar-panel.closed {
-    transform: translateX(100%);
-  }
-  .calendar-panel.open {
-    transform: translateX(0);
-  }
+/* Sliding calendar panel */
+.calendar-panel {
+  transition: transform 0.3s ease-in-out;
+  z-index: 20;
+}
+.calendar-panel.closed {
+  transform: translateX(100%);
+}
+.calendar-panel.open {
+  transform: translateX(0);
+}
+/* Calendar tab always visible */
+#calendar-tab {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+}
 </style>
 </head>
 <body class="bg-gray-100">
@@ -39,20 +45,23 @@
   </div>
 
   <!-- Right Side -->
-  <div class="w-2/3 flex flex-col relative">
+  <div class="w-2/3 relative flex flex-col">
     <!-- Top Image -->
     <div class="p-4">
       <img src="https://i.postimg.cc/2da0fa98/2da0fa98.png" alt="Life Tracker" class="w-full rounded-lg shadow-md">
     </div>
 
-    <!-- Calendar Toggle -->
-    <div class="p-4">
-      <button id="toggle-calendar" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Toggle Calendar</button>
+    <!-- Small Calendar Tab -->
+    <div id="calendar-tab" class="absolute top-32 right-0 bg-indigo-600 text-white px-3 py-2 rounded-l cursor-pointer shadow-lg">
+      📅 Calendar
     </div>
 
-    <!-- Calendar Panel -->
-    <div id="calendar-panel" class="calendar-panel closed absolute top-0 right-0 w-full h-full bg-white shadow-lg p-4 overflow-y-auto">
-      <h2 class="text-xl font-bold mb-4">Calendar</h2>
+    <!-- Sliding Calendar Panel -->
+    <div id="calendar-panel" class="calendar-panel closed absolute top-0 right-0 w-2/3 h-full bg-white shadow-lg p-4 overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold">Calendar</h2>
+        <button id="close-calendar" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Close</button>
+      </div>
       <div class="flex space-x-2 mb-4">
         <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Monthly</button>
         <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Weekly</button>
@@ -95,7 +104,8 @@ let editTaskId = null;
 const tabButtons = document.querySelectorAll('.tab-btn');
 const contentArea = document.getElementById('content-area');
 const calendarPanel = document.getElementById('calendar-panel');
-const toggleCalendar = document.getElementById('toggle-calendar');
+const calendarTab = document.getElementById('calendar-tab');
+const closeCalendar = document.getElementById('close-calendar');
 const calendarTasks = document.getElementById('calendar-tasks');
 
 // Handle tab click
@@ -109,22 +119,14 @@ tabButtons.forEach(btn => {
 });
 
 // Toggle Calendar
-toggleCalendar.addEventListener('click', () => {
-  calendarPanel.classList.toggle('open');
-  calendarPanel.classList.toggle('closed');
+calendarTab.addEventListener('click', () => {
+  calendarPanel.classList.remove('closed');
+  calendarPanel.classList.add('open');
 });
-
-// Add / Update Task Function (example: Part-Time)
-async function addTask(tab, taskData) {
-  const colRef = collection(db, tab);
-  if (editTaskId) {
-    const taskRef = doc(db, tab, editTaskId);
-    await updateDoc(taskRef, taskData);
-    editTaskId = null;
-  } else {
-    await addDoc(colRef, { ...taskData, createdAt: serverTimestamp() });
-  }
-}
+closeCalendar.addEventListener('click', () => {
+  calendarPanel.classList.remove('open');
+  calendarPanel.classList.add('closed');
+});
 
 // Render Tasks Real-time
 let unsubscribe = null;
