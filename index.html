@@ -8,19 +8,50 @@
 <style>
 /* Sliding calendar panel */
 .calendar-panel {
-  transition: transform 0.3s ease-in-out;
-  z-index: 20;
-}
-.calendar-panel.closed {
-  transform: translateX(100%);
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 100%;
+  background-color: #111; /* black */
+  color: white;
+  overflow-x: hidden;
+  transition: width 0.5s ease, transform 0.5s ease;
+  z-index: 30;
+  padding: 1rem;
 }
 .calendar-panel.open {
-  transform: translateX(0);
+  width: 60%; /* Fully visible panel */
 }
-/* Calendar tab always visible */
 #calendar-tab {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+  position: absolute;
+  top: 40%;
+  right: 0;
+  background-color: #111;
+  color: white;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 8px 0 0 8px;
+  font-weight: bold;
+  z-index: 40;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+.calendar-cell {
+  border: 1px solid #333;
+  min-height: 80px;
+  padding: 4px;
+  position: relative;
+}
+.calendar-cell.holiday {
+  background-color: #800000; /* dark red for Irish holiday */
+}
+.calendar-cell .tasks {
+  font-size: 0.75rem;
+  margin-top: 2px;
 }
 </style>
 </head>
@@ -30,7 +61,6 @@
 
   <!-- Left Tabs & Content -->
   <div class="w-1/3 bg-white shadow-lg flex flex-col">
-    <!-- Tabs -->
     <div class="flex flex-col">
       <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="part-time">Part-Time</button>
       <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="full-time">Full-Time</button>
@@ -38,7 +68,6 @@
       <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="courses">Courses</button>
     </div>
 
-    <!-- Content -->
     <div class="flex-1 overflow-y-auto p-4" id="content-area">
       <p class="text-gray-400 text-center italic">Select a tab to view tasks...</p>
     </div>
@@ -48,27 +77,20 @@
   <div class="w-2/3 relative flex flex-col">
     <!-- Top Image -->
     <div class="p-4">
-      <img src="https://i.postimg.cc/2da0fa98/2da0fa98.png" alt="Life Tracker" class="w-full rounded-lg shadow-md">
+      <img src="https://i.postimg.cc/MnrX2g21/2da0fa98.png" alt="Life Tracker" class="w-full rounded-lg shadow-md">
     </div>
 
-    <!-- Small Calendar Tab -->
-    <div id="calendar-tab" class="absolute top-32 right-0 bg-indigo-600 text-white px-3 py-2 rounded-l cursor-pointer shadow-lg">
-      📅 Calendar
-    </div>
+    <!-- Calendar Tab (small) -->
+    <div id="calendar-tab">📅 Calendar</div>
 
     <!-- Sliding Calendar Panel -->
-    <div id="calendar-panel" class="calendar-panel closed absolute top-0 right-0 w-2/3 h-full bg-white shadow-lg p-4 overflow-y-auto">
+    <div id="calendar-panel" class="calendar-panel">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Calendar</h2>
+        <h2 class="text-xl font-bold">March 2026 Calendar</h2>
         <button id="close-calendar" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Close</button>
       </div>
-      <div class="flex space-x-2 mb-4">
-        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Monthly</button>
-        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Weekly</button>
-        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Daily</button>
-      </div>
-      <div id="calendar-tasks" class="space-y-2">
-        <p class="text-gray-400">Tasks will appear here...</p>
+      <div class="calendar-grid" id="calendar-grid">
+        <!-- Calendar cells will be generated here -->
       </div>
     </div>
   </div>
@@ -77,7 +99,7 @@
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
 // Firebase config
@@ -98,7 +120,7 @@ const db = getFirestore(app);
 
 // State
 let activeTab = "part-time";
-let editTaskId = null;
+let unsubscribe = null;
 
 // DOM
 const tabButtons = document.querySelectorAll('.tab-btn');
@@ -106,7 +128,10 @@ const contentArea = document.getElementById('content-area');
 const calendarPanel = document.getElementById('calendar-panel');
 const calendarTab = document.getElementById('calendar-tab');
 const closeCalendar = document.getElementById('close-calendar');
-const calendarTasks = document.getElementById('calendar-tasks');
+const calendarGrid = document.getElementById('calendar-grid');
+
+// Irish holidays March 2026 (example)
+const irishHolidays = ["2026-03-17"]; // St. Patrick's Day
 
 // Handle tab click
 tabButtons.forEach(btn => {
@@ -120,33 +145,34 @@ tabButtons.forEach(btn => {
 
 // Toggle Calendar
 calendarTab.addEventListener('click', () => {
-  calendarPanel.classList.remove('closed');
   calendarPanel.classList.add('open');
 });
 closeCalendar.addEventListener('click', () => {
   calendarPanel.classList.remove('open');
-  calendarPanel.classList.add('closed');
 });
 
-// Render Tasks Real-time
-let unsubscribe = null;
+// Render Tasks
+let tasksData = {};
 function renderTasks() {
   if (unsubscribe) unsubscribe();
   const colRef = collection(db, activeTab);
   const q = query(colRef, orderBy("createdAt", "asc"));
   unsubscribe = onSnapshot(q, snapshot => {
     contentArea.innerHTML = "";
-    calendarTasks.innerHTML = "";
+    tasksData = {}; // reset tasks
     if (snapshot.empty) {
       contentArea.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
-      calendarTasks.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
+      generateCalendar();
       return;
     }
 
     snapshot.forEach(docSnap => {
       const data = docSnap.data();
+      const dateKey = data.date || "unknown";
+      if (!tasksData[dateKey]) tasksData[dateKey] = [];
+      tasksData[dateKey].push(data);
 
-      // Left-side task
+      // Left content
       const div = document.createElement('div');
       div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded mb-2 flex justify-between items-center";
       div.innerHTML = `
@@ -157,17 +183,58 @@ function renderTasks() {
         </div>
       `;
       contentArea.appendChild(div);
-
-      // Right-side calendar task
-      const calDiv = div.cloneNode(true);
-      calendarTasks.appendChild(calDiv);
     });
+
+    generateCalendar();
   });
+}
+
+// Generate Monthly Calendar
+function generateCalendar() {
+  const year = 2026;
+  const month = 2; // March (0-indexed)
+  const firstDay = new Date(year, month, 1).getDay(); // 0-Sunday
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  calendarGrid.innerHTML = "";
+
+  // Weekday headers
+  const weekdays = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  weekdays.forEach(day => {
+    const cell = document.createElement('div');
+    cell.className = "font-bold text-center";
+    cell.textContent = day;
+    calendarGrid.appendChild(cell);
+  });
+
+  // Blank cells before first day
+  for(let i=0; i<firstDay; i++){
+    const blank = document.createElement('div');
+    calendarGrid.appendChild(blank);
+  }
+
+  // Date cells
+  for(let date=1; date<=lastDate; date++){
+    const cellDate = `${year}-03-${String(date).padStart(2,'0')}`;
+    const cell = document.createElement('div');
+    cell.className = "calendar-cell";
+    if (irishHolidays.includes(cellDate)) cell.classList.add('holiday');
+    cell.innerHTML = `<div>${date}</div><div class="tasks"></div>`;
+    // Add tasks for this date
+    if(tasksData[cellDate]){
+      const tasksDiv = cell.querySelector('.tasks');
+      tasksData[cellDate].forEach(t => {
+        const taskEl = document.createElement('div');
+        taskEl.textContent = t.task || t.activity || t.courseName;
+        tasksDiv.appendChild(taskEl);
+      });
+    }
+    calendarGrid.appendChild(cell);
+  }
 }
 
 // Initial render
 renderTasks();
-
 </script>
 </body>
 </html>
