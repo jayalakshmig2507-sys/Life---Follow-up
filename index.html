@@ -3,45 +3,67 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Life Tracker</title>
+<title>Life Tracker Dashboard</title>
 <script src="https://cdn.tailwindcss.com"></script>
+<style>
+  /* Sliding calendar panel */
+  .calendar-panel {
+    transition: transform 0.3s ease-in-out;
+  }
+  .calendar-panel.closed {
+    transform: translateX(100%);
+  }
+  .calendar-panel.open {
+    transform: translateX(0);
+  }
+</style>
 </head>
-<body class="bg-slate-50 p-4">
+<body class="bg-gray-100">
 
-<div class="max-w-xl mx-auto bg-white shadow-lg rounded-xl overflow-hidden">
-    <div class="bg-indigo-600 p-4">
-        <h1 class="text-white text-xl font-bold text-center">📅 Life Tracker</h1>
-    </div>
+<div class="flex min-h-screen">
 
+  <!-- Left Tabs & Content -->
+  <div class="w-1/3 bg-white shadow-lg flex flex-col">
     <!-- Tabs -->
-    <div class="flex justify-around bg-indigo-100 p-2">
-        <button class="tab-btn px-4 py-2 font-semibold text-indigo-700 rounded-lg bg-indigo-200" data-tab="part-time">Part-Time</button>
-        <button class="tab-btn px-4 py-2 font-semibold text-indigo-700 rounded-lg" data-tab="full-time">Full-Time</button>
-        <button class="tab-btn px-4 py-2 font-semibold text-indigo-700 rounded-lg" data-tab="personal-goals">Personal Goals</button>
+    <div class="flex flex-col">
+      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="part-time">Part-Time</button>
+      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="full-time">Full-Time</button>
+      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="personal-growth">Personal Growth</button>
+      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="courses">Courses</button>
     </div>
 
-    <!-- Date Picker -->
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-4" id="content-area">
+      <p class="text-gray-400 text-center italic">Select a tab to view tasks...</p>
+    </div>
+  </div>
+
+  <!-- Right Side -->
+  <div class="w-2/3 flex flex-col relative">
+    <!-- Top Image -->
     <div class="p-4">
-        <label for="task-date" class="block font-semibold mb-1 text-gray-700">Select Date:</label>
-        <input type="date" id="task-date" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
+      <img src="https://i.postimg.cc/2da0fa98/2da0fa98.png" alt="Life Tracker" class="w-full rounded-lg shadow-md">
     </div>
 
-    <!-- Input area -->
-    <div class="p-6 space-y-2">
-        <input id="task" type="text" placeholder="Task / Activity Name" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
-        <input id="details" type="text" placeholder="Details / Stats" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
-        <input id="time" type="time" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
-        <button id="saveBtn" class="w-full bg-indigo-600 text-white font-semibold py-2 rounded-lg hover:bg-indigo-700 transition">
-            Save / Update Task
-        </button>
+    <!-- Calendar Toggle -->
+    <div class="p-4">
+      <button id="toggle-calendar" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition">Toggle Calendar</button>
     </div>
 
-    <hr>
-
-    <!-- Task list -->
-    <div id="list-container" class="p-6 space-y-3">
-        <p class="text-gray-400 text-center italic">Select a tab and date to view tasks...</p>
+    <!-- Calendar Panel -->
+    <div id="calendar-panel" class="calendar-panel closed absolute top-0 right-0 w-full h-full bg-white shadow-lg p-4 overflow-y-auto">
+      <h2 class="text-xl font-bold mb-4">Calendar</h2>
+      <div class="flex space-x-2 mb-4">
+        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Monthly</button>
+        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Weekly</button>
+        <button class="view-btn bg-indigo-500 text-white px-3 py-1 rounded">Daily</button>
+      </div>
+      <div id="calendar-tasks" class="space-y-2">
+        <p class="text-gray-400">Tasks will appear here...</p>
+      </div>
     </div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -49,15 +71,15 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-// Firebase config (your existing setup)
+// Firebase config
 const firebaseConfig = {
-    apiKey: "AIzaSyC1IkJhlE0Z6vqSjbGwkxPfT2udshsQCBc",
-    authDomain: "jayam-personal-2026.firebaseapp.com",
-    projectId: "jayam-personal-2026",
-    storageBucket: "jayam-personal-2026.firebasestorage.app",
-    messagingSenderId: "62160466692",
-    appId: "1:62160466692:web:a2587dce772da5a6861651",
-    measurementId: "G-YX1KZYZFEL"
+  apiKey: "AIzaSyC1IkJhlE0Z6vqSjbGwkxPfT2udshsQCBc",
+  authDomain: "jayam-personal-2026.firebaseapp.com",
+  projectId: "jayam-personal-2026",
+  storageBucket: "jayam-personal-2026.firebasestorage.app",
+  messagingSenderId: "62160466692",
+  appId: "1:62160466692:web:a2587dce772da5a6861651",
+  measurementId: "G-YX1KZYZFEL"
 };
 
 // Initialize Firebase
@@ -66,133 +88,83 @@ const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
 // State
-let activeTab = localStorage.getItem('selectedTab') || "part-time";
-let activeDate = localStorage.getItem('selectedDate') || new Date().toISOString().split('T')[0];
+let activeTab = "part-time";
 let editTaskId = null;
 
-// DOM Elements
-const saveBtn = document.getElementById('saveBtn');
-const listContainer = document.getElementById('list-container');
-const taskInput = document.getElementById('task');
-const detailsInput = document.getElementById('details');
-const timeInput = document.getElementById('time');
-const dateInput = document.getElementById('task-date');
-
-// Set initial values
-dateInput.value = activeDate;
-
-// Tabs
+// DOM
 const tabButtons = document.querySelectorAll('.tab-btn');
+const contentArea = document.getElementById('content-area');
+const calendarPanel = document.getElementById('calendar-panel');
+const toggleCalendar = document.getElementById('toggle-calendar');
+const calendarTasks = document.getElementById('calendar-tasks');
+
+// Handle tab click
 tabButtons.forEach(btn => {
-    if (btn.dataset.tab === activeTab) btn.classList.add('bg-indigo-200');
-    else btn.classList.remove('bg-indigo-200');
-
-    btn.addEventListener('click', () => {
-        activeTab = btn.dataset.tab;
-        localStorage.setItem('selectedTab', activeTab);
-        tabButtons.forEach(b => b.classList.remove('bg-indigo-200'));
-        btn.classList.add('bg-indigo-200');
-        setupListener();
-    });
+  btn.addEventListener('click', () => {
+    activeTab = btn.dataset.tab;
+    tabButtons.forEach(b => b.classList.remove('bg-gray-200'));
+    btn.classList.add('bg-gray-200');
+    renderTasks();
+  });
 });
 
-// Date picker
-dateInput.addEventListener('change', (e) => {
-    activeDate = e.target.value;
-    localStorage.setItem('selectedDate', activeDate);
-    setupListener();
+// Toggle Calendar
+toggleCalendar.addEventListener('click', () => {
+  calendarPanel.classList.toggle('open');
+  calendarPanel.classList.toggle('closed');
 });
 
-// Save / Update Task
-saveBtn.addEventListener('click', async () => {
-    const task = taskInput.value.trim();
-    const details = detailsInput.value.trim();
-    const time = timeInput.value;
-
-    if (!task || !details || !time) return alert("Please fill all fields");
-
-    try {
-        const colRef = collection(db, activeTab);
-        if (editTaskId) {
-            const taskRef = doc(db, activeTab, editTaskId);
-            await updateDoc(taskRef, { task, details, time });
-            editTaskId = null;
-            saveBtn.textContent = "Save / Update Task";
-        } else {
-            await addDoc(colRef, {
-                task,
-                details,
-                time,
-                date: activeDate,
-                status: "pending",
-                createdAt: serverTimestamp()
-            });
-        }
-
-        taskInput.value = "";
-        detailsInput.value = "";
-        timeInput.value = "";
-    } catch (err) {
-        console.error("Error saving task:", err);
-    }
-});
-
-// Real-time listener
-let unsubscribe = null;
-function setupListener() {
-    if (unsubscribe) unsubscribe();
-
-    const colRef = collection(db, activeTab);
-    const q = query(colRef, orderBy("date", "asc"), orderBy("time", "asc"));
-
-    unsubscribe = onSnapshot(q, (snapshot) => {
-        listContainer.innerHTML = "";
-        let tasksFound = false;
-
-        snapshot.forEach(docSnap => {
-            const data = docSnap.data();
-            if (data.date === activeDate) {
-                tasksFound = true;
-                const div = document.createElement('div');
-                div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded flex justify-between items-center space-x-2";
-
-                div.innerHTML = `
-                    <div class="flex-1">
-                        <div class="font-bold text-gray-800">${data.task}</div>
-                        <div class="text-sm text-gray-500">${data.details}</div>
-                        <div class="text-xs text-gray-400">Date: ${data.date} | Time: ${data.time} | Status: ${data.status}</div>
-                    </div>
-                    <div class="flex space-x-1">
-                        <button class="markDoneBtn px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600">Done</button>
-                        <button class="editBtn px-2 py-1 text-sm rounded bg-yellow-500 text-white hover:bg-yellow-600">Edit</button>
-                    </div>
-                `;
-
-                div.querySelector('.markDoneBtn').addEventListener('click', async () => {
-                    const taskRef = doc(db, activeTab, docSnap.id);
-                    await updateDoc(taskRef, { status: "done" });
-                });
-
-                div.querySelector('.editBtn').addEventListener('click', () => {
-                    taskInput.value = data.task;
-                    detailsInput.value = data.details;
-                    timeInput.value = data.time;
-                    editTaskId = docSnap.id;
-                    saveBtn.textContent = "Update Task";
-                });
-
-                listContainer.appendChild(div);
-            }
-        });
-
-        if (!tasksFound) {
-            listContainer.innerHTML = '<p class="text-gray-400 text-center">No tasks for this day.</p>';
-        }
-    });
+// Add / Update Task Function (example: Part-Time)
+async function addTask(tab, taskData) {
+  const colRef = collection(db, tab);
+  if (editTaskId) {
+    const taskRef = doc(db, tab, editTaskId);
+    await updateDoc(taskRef, taskData);
+    editTaskId = null;
+  } else {
+    await addDoc(colRef, { ...taskData, createdAt: serverTimestamp() });
+  }
 }
 
-// Initial load
-setupListener();
+// Render Tasks Real-time
+let unsubscribe = null;
+function renderTasks() {
+  if (unsubscribe) unsubscribe();
+  const colRef = collection(db, activeTab);
+  const q = query(colRef, orderBy("createdAt", "asc"));
+  unsubscribe = onSnapshot(q, snapshot => {
+    contentArea.innerHTML = "";
+    calendarTasks.innerHTML = "";
+    if (snapshot.empty) {
+      contentArea.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
+      calendarTasks.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
+      return;
+    }
+
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+
+      // Left-side task
+      const div = document.createElement('div');
+      div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded mb-2 flex justify-between items-center";
+      div.innerHTML = `
+        <div>
+          <div class="font-bold text-gray-800">${data.task || data.activity || data.courseName}</div>
+          <div class="text-sm text-gray-500">${data.details || data.description || data.progress || ''}</div>
+          <div class="text-xs text-gray-400">${data.date || ''} | ${data.time || ''} | Status: ${data.status || 'pending'}</div>
+        </div>
+      `;
+      contentArea.appendChild(div);
+
+      // Right-side calendar task
+      const calDiv = div.cloneNode(true);
+      calendarTasks.appendChild(calDiv);
+    });
+  });
+}
+
+// Initial render
+renderTasks();
 
 </script>
 </body>
