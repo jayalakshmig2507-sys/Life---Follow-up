@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Life Tracker</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Life Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-50 p-4">
 
@@ -32,23 +32,24 @@
         <input id="details" type="text" placeholder="Details / Stats" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
         <input id="time" type="time" class="w-full border rounded-lg p-2 focus:ring-2 focus:ring-indigo-400 outline-none">
         <button id="saveBtn" class="w-full bg-indigo-600 text-white font-semibold py-2 rounded-lg hover:bg-indigo-700 transition">
-            Save Task
+            Save / Update Task
         </button>
     </div>
 
     <hr>
 
-    <!-- List area -->
+    <!-- Task list -->
     <div id="list-container" class="p-6 space-y-3">
-        <p class="text-gray-400 text-center italic">Select a tab and date to view tasks...</p>
+        <p class="text-gray-400 text-center italic">Select a tab to view tasks...</p>
     </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-// Firebase Config
+// Firebase config (your existing file)
 const firebaseConfig = {
     apiKey: "AIzaSyC1IkJhlE0Z6vqSjbGwkxPfT2udshsQCBc",
     authDomain: "jayam-personal-2026.firebaseapp.com",
@@ -61,20 +62,24 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const db = getFirestore(app);
 
-let activeTab = "part-time"; 
+// State
+let activeTab = "part-time";
 let activeDate = new Date().toISOString().split('T')[0]; // default today
+let editTaskId = null; // for editing existing task
 
+// DOM Elements
 const saveBtn = document.getElementById('saveBtn');
 const listContainer = document.getElementById('list-container');
 const taskInput = document.getElementById('task');
 const detailsInput = document.getElementById('details');
 const timeInput = document.getElementById('time');
 const dateInput = document.getElementById('task-date');
-dateInput.value = activeDate; // set today
+dateInput.value = activeDate;
 
-// Tab buttons
+// Tabs
 const tabButtons = document.querySelectorAll('.tab-btn');
 tabButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -91,7 +96,7 @@ dateInput.addEventListener('change', (e) => {
     setupListener();
 });
 
-// Save task
+// Save / Update task
 saveBtn.addEventListener('click', async () => {
     const task = taskInput.value.trim();
     const details = detailsInput.value.trim();
@@ -101,19 +106,28 @@ saveBtn.addEventListener('click', async () => {
 
     try {
         const colRef = collection(db, activeTab);
-        await addDoc(colRef, {
-            task,
-            details,
-            time,
-            date: activeDate,
-            status: "pending",
-            createdAt: serverTimestamp()
-        });
+        if (editTaskId) {
+            // Update existing task
+            const taskRef = doc(db, activeTab, editTaskId);
+            await updateDoc(taskRef, { task, details, time });
+            editTaskId = null;
+            saveBtn.textContent = "Save / Update Task";
+        } else {
+            // Add new task
+            await addDoc(colRef, {
+                task,
+                details,
+                time,
+                date: activeDate,
+                status: "pending",
+                createdAt: serverTimestamp()
+            });
+        }
         taskInput.value = "";
         detailsInput.value = "";
         timeInput.value = "";
     } catch (err) {
-        console.error("Error adding document: ", err);
+        console.error("Error saving task: ", err);
     }
 });
 
@@ -123,41 +137,48 @@ function setupListener() {
     if (unsubscribe) unsubscribe();
 
     const colRef = collection(db, activeTab);
-    const q = query(colRef, orderBy("time", "asc"));
+    const q = query(colRef, orderBy("date", "asc"), orderBy("time", "asc"));
 
     unsubscribe = onSnapshot(q, (snapshot) => {
         listContainer.innerHTML = "";
-        let tasksFound = false;
-
-        snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            if (data.date === activeDate) {
-                tasksFound = true;
-                const div = document.createElement('div');
-                div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded flex justify-between items-center";
-
-                div.innerHTML = `
-                    <div>
-                        <div class="font-bold text-gray-800">${data.task}</div>
-                        <div class="text-sm text-gray-500">${data.details}</div>
-                        <div class="text-xs text-gray-400">Time: ${data.time} | Status: ${data.status}</div>
-                    </div>
-                    <button class="markDoneBtn px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600">Done</button>
-                `;
-
-                const btn = div.querySelector(".markDoneBtn");
-                btn.addEventListener('click', async () => {
-                    const docRef = doc(db, activeTab, docSnap.id);
-                    await updateDoc(docRef, { status: "done" });
-                });
-
-                listContainer.appendChild(div);
-            }
-        });
-
-        if (!tasksFound) {
-            listContainer.innerHTML = '<p class="text-gray-400 text-center">No tasks for this day.</p>';
+        if (snapshot.empty) {
+            listContainer.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
+            return;
         }
+
+        snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            const div = document.createElement('div');
+            div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded flex justify-between items-center space-x-2";
+            div.innerHTML = `
+                <div class="flex-1">
+                    <div class="font-bold text-gray-800">${data.task}</div>
+                    <div class="text-sm text-gray-500">${data.details}</div>
+                    <div class="text-xs text-gray-400">Date: ${data.date} | Time: ${data.time} | Status: ${data.status}</div>
+                </div>
+                <div class="flex space-x-1">
+                    <button class="markDoneBtn px-2 py-1 text-sm rounded bg-green-500 text-white hover:bg-green-600">Done</button>
+                    <button class="editBtn px-2 py-1 text-sm rounded bg-yellow-500 text-white hover:bg-yellow-600">Edit</button>
+                </div>
+            `;
+
+            // Mark done
+            div.querySelector('.markDoneBtn').addEventListener('click', async () => {
+                const taskRef = doc(db, activeTab, docSnap.id);
+                await updateDoc(taskRef, { status: "done" });
+            });
+
+            // Edit task
+            div.querySelector('.editBtn').addEventListener('click', () => {
+                taskInput.value = data.task;
+                detailsInput.value = data.details;
+                timeInput.value = data.time;
+                editTaskId = docSnap.id;
+                saveBtn.textContent = "Update Task";
+            });
+
+            listContainer.appendChild(div);
+        });
     });
 }
 
