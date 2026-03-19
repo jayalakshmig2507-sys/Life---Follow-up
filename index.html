@@ -1,268 +1,222 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Life Tracker Dashboard</title>
-<script src="https://cdn.tailwindcss.com"></script>
-<style>
-/* Sliding calendar panel */
-.calendar-panel {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 0;
-  height: 100%;
-  background-color: #111;
-  color: white;
-  overflow-x: hidden;
-  transition: width 0.5s ease;
-  z-index: 30;
-  padding: 1rem;
-}
-.calendar-panel.open {
-  width: 60%;
-}
-#calendar-tab {
-  position: absolute;
-  top: 40%;
-  right: 0;
-  background-color: #111;
-  color: white;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  border-radius: 8px 0 0 8px;
-  font-weight: bold;
-  z-index: 40;
-}
-.calendar-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-}
-.calendar-cell {
-  border: 1px solid #333;
-  min-height: 80px;
-  padding: 4px;
-  position: relative;
-}
-.calendar-cell.holiday {
-  background-color: #800000;
-}
-.calendar-cell .tasks {
-  font-size: 0.75rem;
-  margin-top: 2px;
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jayam's Life Tracker & Scheduler</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
+    <style>
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+        }
+        .animate-flash { animation: pulse-gold 2s infinite; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e5e7eb; }
+        .calendar-day { min-height: 100px; background: white; padding: 0.5rem; transition: background 0.2s; }
+        .calendar-day:hover { background: #f9fafb; cursor: pointer; }
+        .holiday-mark { border-top: 3px solid #ef4444; }
+        .today-mark { background: #fefce8 !important; border: 2px solid #ca8a04; }
+        .tab-active { border-bottom: 3px solid #2563eb; color: #2563eb; font-weight: bold; }
+        .sidebar-photo { object-fit: cover; height: 100%; border-radius: 1rem; }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50 font-sans">
 
-<div class="flex min-h-screen">
+<div class="flex h-screen overflow-hidden">
+    <div class="w-2/3 flex flex-col p-6 overflow-y-auto">
+        <header class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Life Tracker</h1>
+            <div class="flex gap-4">
+                 <button onclick="openCalendar()" class="animate-flash bg-yellow-500 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-bold">
+                    <i data-lucide="calendar"></i> OPEN FULL SCHEDULER
+                </button>
+            </div>
+        </header>
 
-  <!-- Left Tabs & Content -->
-  <div class="w-1/3 bg-white shadow-lg flex flex-col">
-    <div class="flex flex-col">
-      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="part-time">Part-Time</button>
-      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="full-time">Full-Time</button>
-      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="personal-growth">Personal Growth</button>
-      <button class="tab-btn py-3 px-4 border-b hover:bg-gray-100 text-left font-semibold" data-tab="courses">Courses</button>
+        <div class="flex border-b mb-6 bg-white rounded-t-lg">
+            <button onclick="switchTab('parttime')" id="tab-parttime" class="flex-1 py-3 tab-active">Part Time</button>
+            <button onclick="switchTab('fulltime')" id="tab-fulltime" class="flex-1 py-3 text-gray-500">Full Time</button>
+            <button onclick="switchTab('growth')" id="tab-growth" class="flex-1 py-3 text-gray-500">Growth</button>
+            <button onclick="switchTab('course')" id="tab-course" class="flex-1 py-3 text-gray-500">Course</button>
+        </div>
+
+        <div id="task-container" class="space-y-4">
+            </div>
+
+        <button onclick="showAddTaskModal()" class="mt-8 bg-blue-600 text-white p-4 rounded-xl shadow-lg hover:bg-blue-700 transition flex items-center justify-center gap-2">
+            <i data-lucide="plus-circle"></i> Add New Record
+        </button>
     </div>
 
-    <!-- Left content area -->
-    <div class="flex-1 overflow-y-auto p-4" id="content-area">
-      <p class="text-gray-400 text-center italic">Select a tab to view tasks...</p>
+    <div class="w-1/3 p-6 bg-white border-l flex flex-col">
+        <div class="flex-1 mb-6">
+            <img src="https://i.postimg.cc/jjRfNrM3/63445777-1BCC-4A05-ACF6-7AAE2396A4E9.png" alt="Profile" class="sidebar-photo shadow-2xl w-full">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-blue-50 p-4 rounded-xl text-center">
+                <p class="text-blue-600 text-sm font-bold">ACTIVE TASKS</p>
+                <p id="stat-active" class="text-2xl font-black">0</p>
+            </div>
+            <div class="bg-green-50 p-4 rounded-xl text-center">
+                <p class="text-green-600 text-sm font-bold">COMPLETED</p>
+                <p id="stat-done" class="text-2xl font-black">0</p>
+            </div>
+        </div>
+        <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" class="mt-4 text-center text-sm text-gray-400 hover:underline">
+            Go to Google Calendar →
+        </a>
     </div>
+</div>
 
-    <!-- Form to add/modify Part-Time tasks -->
-    <div class="p-4 border-t bg-gray-50">
-      <h2 class="font-bold mb-2">Add / Modify Task</h2>
-      <input id="companyName" placeholder="Company Name" class="w-full mb-1 p-2 border rounded">
-      <input id="jobDescription" placeholder="Job Description" class="w-full mb-1 p-2 border rounded">
-      <input id="contactName" placeholder="Contact Name" class="w-full mb-1 p-2 border rounded">
-      <input id="contactEmail" placeholder="Contact Email" class="w-full mb-1 p-2 border rounded">
-      <input id="followUpDate" type="date" class="w-full mb-1 p-2 border rounded">
-      <select id="status" class="w-full mb-1 p-2 border rounded">
-        <option value="pending">Pending</option>
-        <option value="done">Done</option>
-      </select>
-      <button id="saveTask" class="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">Save Task</button>
+<div id="calendar-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-6xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+        <div class="p-6 border-b flex justify-between items-center">
+            <h2 id="calendar-month-year" class="text-2xl font-bold">Month Year</h2>
+            <div class="flex gap-2">
+                <button onclick="prevMonth()" class="p-2 hover:bg-gray-100 rounded">‹</button>
+                <button onclick="nextMonth()" class="p-2 hover:bg-gray-100 rounded">›</button>
+                <button onclick="closeCalendar()" class="ml-4 text-gray-500 hover:text-black">✕</button>
+            </div>
+        </div>
+        <div class="overflow-y-auto p-4">
+            <div class="grid grid-cols-7 text-center font-bold text-gray-500 mb-2">
+                <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
+            </div>
+            <div id="calendar-body" class="calendar-grid">
+                </div>
+        </div>
     </div>
-  </div>
-
-  <!-- Right Side -->
-  <div class="w-2/3 relative flex flex-col">
-    <!-- Top Image -->
-    <div class="p-4">
-      <img src="https://i.postimg.cc/MnrX2g21/2da0fa98.png" alt="Life Tracker" class="w-3/4 mx-auto object-contain rounded-lg shadow-md">
-    </div>
-
-    <!-- Calendar Tab (small) -->
-    <div id="calendar-tab">📅 Calendar</div>
-
-    <!-- Sliding Calendar Panel -->
-    <div id="calendar-panel" class="calendar-panel">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">March 2026 Calendar</h2>
-        <button id="close-calendar" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">Close</button>
-      </div>
-      <div class="calendar-grid" id="calendar-grid"></div>
-    </div>
-  </div>
-
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyC1IkJhlE0Z6vqSjbGwkxPfT2udshsQCBc",
-  authDomain: "jayam-personal-2026.firebaseapp.com",
-  projectId: "jayam-personal-2026",
-  storageBucket: "jayam-personal-2026.firebasestorage.app",
-  messagingSenderId: "62160466692",
-  appId: "1:62160466692:web:a2587dce772da5a6861651",
-  measurementId: "G-YX1KZYZFEL"
-};
+    const firebaseConfig = {
+        apiKey: "AIzaSyC1IkJhlE0Z6vqSjbGwkxPfT2udshsQCBc",
+        authDomain: "jayam-personal-2026.firebaseapp.com",
+        projectId: "jayam-personal-2026",
+        storageBucket: "jayam-personal-2026.firebasestorage.app",
+        messagingSenderId: "62160466692",
+        appId: "1:62160466692:web:a2587dce772da5a6861651"
+    };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const db = getFirestore(app);
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    let currentTab = 'parttime';
+    let currentDate = new Date();
 
-// State
-let activeTab = "part-time";
-let unsubscribe = null;
-let tasksData = {};
+    // Initialize Icons
+    lucide.createIcons();
 
-// DOM
-const tabButtons = document.querySelectorAll('.tab-btn');
-const contentArea = document.getElementById('content-area');
-const calendarPanel = document.getElementById('calendar-panel');
-const calendarTab = document.getElementById('calendar-tab');
-const closeCalendar = document.getElementById('close-calendar');
-const calendarGrid = document.getElementById('calendar-grid');
+    // --- TAB SYSTEM ---
+    window.switchTab = (tab) => {
+        currentTab = tab;
+        document.querySelectorAll('button[id^="tab-"]').forEach(btn => btn.className = "flex-1 py-3 text-gray-500");
+        document.getElementById(`tab-${tab}`).className = "flex-1 py-3 tab-active";
+        loadTasks();
+    };
 
-// Form inputs
-const companyName = document.getElementById('companyName');
-const jobDescription = document.getElementById('jobDescription');
-const contactName = document.getElementById('contactName');
-const contactEmail = document.getElementById('contactEmail');
-const followUpDate = document.getElementById('followUpDate');
-const status = document.getElementById('status');
-const saveTask = document.getElementById('saveTask');
-
-// Irish holiday
-const irishHolidays = ["2026-03-17"];
-
-// Tab click
-tabButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    activeTab = btn.dataset.tab;
-    tabButtons.forEach(b => b.classList.remove('bg-gray-200'));
-    btn.classList.add('bg-gray-200');
-    renderTasks();
-  });
-});
-
-// Calendar toggle
-calendarTab.addEventListener('click', () => calendarPanel.classList.add('open'));
-closeCalendar.addEventListener('click', () => calendarPanel.classList.remove('open'));
-
-// Save task
-saveTask.addEventListener('click', async () => {
-  if(!companyName.value || !followUpDate.value) return alert("Company name and follow-up date required!");
-  try {
-    await addDoc(collection(db, activeTab), {
-      companyName: companyName.value,
-      jobDescription: jobDescription.value,
-      contactName: contactName.value,
-      contactEmail: contactEmail.value,
-      followUpDate: followUpDate.value,
-      status: status.value,
-      createdAt: serverTimestamp()
-    });
-    companyName.value = jobDescription.value = contactName.value = contactEmail.value = followUpDate.value = '';
-    status.value = 'pending';
-    console.log("Task saved successfully!");
-  } catch(err) {
-    console.error("Error saving task:", err);
-  }
-});
-
-// Render tasks
-function renderTasks() {
-  if (unsubscribe) unsubscribe();
-  const colRef = collection(db, activeTab);
-  const q = query(colRef, orderBy("createdAt", "asc"));
-  unsubscribe = onSnapshot(q, snapshot => {
-    contentArea.innerHTML = "";
-    tasksData = {};
-    if(snapshot.empty) {
-      contentArea.innerHTML = '<p class="text-gray-400 text-center">No tasks yet.</p>';
-      generateCalendar();
-      return;
+    function loadTasks() {
+        const q = query(collection(db, currentTab), orderBy('createdAt', 'desc'));
+        onSnapshot(q, (snapshot) => {
+            const container = document.getElementById('task-container');
+            container.innerHTML = '';
+            let active = 0, done = 0;
+            
+            snapshot.forEach((doc) => {
+                const task = doc.data();
+                if(task.status === 'Done') done++; else active++;
+                
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex justify-between items-center";
+                card.innerHTML = `
+                    <div>
+                        <h3 class="font-bold text-lg">${task.name}</h3>
+                        <p class="text-gray-600 text-sm">${task.desc}</p>
+                        <span class="text-xs text-blue-500 font-medium">Follow up: ${task.date || 'No date'}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <select onchange="updateStatus('${doc.id}', this.value)" class="bg-gray-50 border rounded-md p-1 text-sm">
+                            <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>⏳ Pending</option>
+                            <option value="Working" ${task.status === 'Working' ? 'selected' : ''}>🔨 Working</option>
+                            <option value="Done" ${task.status === 'Done' ? 'selected' : ''}>✅ Done</option>
+                        </select>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            document.getElementById('stat-active').innerText = active;
+            document.getElementById('stat-done').innerText = done;
+        });
     }
-    snapshot.forEach(docSnap => {
-      const data = docSnap.data();
-      const dateKey = data.followUpDate || "unknown";
-      if(!tasksData[dateKey]) tasksData[dateKey] = [];
-      tasksData[dateKey].push(data);
 
-      // Left panel task
-      const div = document.createElement('div');
-      div.className = "p-3 bg-gray-50 border-l-4 border-indigo-500 rounded mb-2";
-      div.innerHTML = `
-        <div class="font-bold">${data.companyName}</div>
-        <div class="text-sm">${data.jobDescription || ''}</div>
-        <div class="text-sm">Contact: ${data.contactName || ''} | ${data.contactEmail || ''}</div>
-        <div class="text-sm">Follow-up: ${data.followUpDate || ''}</div>
-        <div class="text-xs text-gray-400">Status: ${data.status || 'pending'}</div>
-      `;
-      contentArea.appendChild(div);
-    });
-    generateCalendar();
-  });
-}
+    window.updateStatus = async (id, newStatus) => {
+        await updateDoc(doc(db, currentTab, id), { status: newStatus });
+    };
 
-// Generate calendar grid
-function generateCalendar() {
-  const year = 2026, month = 2; // March
-  const firstDay = new Date(year, month, 1).getDay();
-  const lastDate = new Date(year, month+1,0).getDate();
+    // --- CALENDAR SYSTEM ---
+    window.openCalendar = () => {
+        document.getElementById('calendar-modal').classList.remove('hidden');
+        renderCalendar();
+    };
+    window.closeCalendar = () => document.getElementById('calendar-modal').classList.add('hidden');
 
-  calendarGrid.innerHTML = "";
-  ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach(d => {
-    const cell = document.createElement('div');
-    cell.className = "font-bold text-center";
-    cell.textContent = d;
-    calendarGrid.appendChild(cell);
-  });
+    function renderCalendar() {
+        const monthYear = document.getElementById('calendar-month-year');
+        const calendarBody = document.getElementById('calendar-body');
+        calendarBody.innerHTML = '';
 
-  for(let i=0;i<firstDay;i++) calendarGrid.appendChild(document.createElement('div'));
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        monthYear.innerText = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentDate);
 
-  for(let date=1; date<=lastDate; date++){
-    const cellDate = `${year}-03-${String(date).padStart(2,'0')}`;
-    const cell = document.createElement('div');
-    cell.className = "calendar-cell";
-    if(irishHolidays.includes(cellDate)) cell.classList.add('holiday');
-    cell.innerHTML = `<div>${date}</div><div class="tasks"></div>`;
-    if(tasksData[cellDate]){
-      const tasksDiv = cell.querySelector('.tasks');
-      tasksData[cellDate].forEach(t => {
-        const taskEl = document.createElement('div');
-        taskEl.textContent = t.companyName;
-        tasksDiv.appendChild(taskEl);
-      });
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+        // Empty cells for previous month
+        for (let i = 0; i < firstDay; i++) {
+            const empty = document.createElement('div');
+            empty.className = "calendar-day bg-gray-50";
+            calendarBody.appendChild(empty);
+        }
+
+        // Days of current month
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dayCell = document.createElement('div');
+            const isToday = new Date().toDateString() === new Date(year, month, d).toDateString();
+            dayCell.className = `calendar-day ${isToday ? 'today-mark' : ''}`;
+            dayCell.innerHTML = `<span class="font-bold">${d}</span>`;
+            
+            // Add click event to add schedule
+            dayCell.onclick = () => {
+                const title = prompt(`Add schedule for ${d} ${monthYear.innerText}:`);
+                if(title) saveSchedule(year, month, d, title);
+            };
+
+            calendarBody.appendChild(dayCell);
+        }
     }
-    calendarGrid.appendChild(cell);
-  }
-}
 
-// Initial render
-renderTasks();
+    async function saveSchedule(y, m, d, title) {
+        const dateStr = `${y}-${m+1}-${d}`;
+        await addDoc(collection(db, "schedules"), {
+            title,
+            date: dateStr,
+            createdAt: serverTimestamp()
+        });
+        alert("Schedule Saved!");
+        renderCalendar();
+    }
+
+    window.prevMonth = () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); };
+    window.nextMonth = () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); };
+
+    // Initial Load
+    loadTasks();
+
 </script>
 </body>
 </html>
