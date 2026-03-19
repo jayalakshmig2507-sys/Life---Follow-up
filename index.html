@@ -3,72 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jayam's Pro Tracker & Scheduler</title>
+    <title>Jayam's Life Tracker 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.0/lucide.min.js"></script>
     <style>
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #e2e8f0; border: 1px solid #e2e8f0; }
-        .calendar-day { min-height: 100px; background: white; padding: 0.5rem; transition: all 0.2s; position: relative; overflow-y: auto; }
-        .calendar-day:hover { background: #f8fafc; cursor: pointer; }
-        .today-mark { background: #fffbeb !important; border: 2px solid #eab308 !important; }
-        .holiday-tag { background: #fee2e2; color: #ef4444; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; font-weight: bold; margin-bottom: 2px; display: block; }
-        .event-tag { background: #dbeafe; color: #2563eb; font-size: 0.65rem; padding: 2px 4px; border-radius: 4px; margin-bottom: 2px; display: block; border-left: 3px solid #2563eb; }
-        .animate-pop { animation: zoom 0.3s ease-out; }
-        @keyframes zoom { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #cbd5e1; }
+        .calendar-day { min-height: 100px; background: white; padding: 0.5rem; transition: 0.2s; position: relative; }
+        .calendar-day:hover { background: #f1f5f9; cursor: pointer; }
+        .today-mark { background: #fefce8 !important; border: 2px solid #eab308 !important; }
+        .holiday-tag { background: #fee2e2; color: #ef4444; font-size: 10px; padding: 2px 4px; border-radius: 4px; font-weight: bold; margin-bottom: 2px; display: block; }
+        .event-tag { background: #dbeafe; color: #1e40af; font-size: 10px; padding: 2px 4px; border-radius: 4px; margin-top: 2px; display: block; border-left: 3px solid #3b82f6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .animate-pop { animation: pop 0.3s ease-out; }
+        @keyframes pop { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-50 text-slate-900 font-sans">
 
 <div class="flex h-screen overflow-hidden">
     <div class="w-3/4 flex flex-col p-8 overflow-y-auto">
         <div class="flex justify-between items-center mb-6">
-            <h1 class="text-3xl font-black text-slate-800">Part-Time <span class="text-blue-600">Tracker</span></h1>
-            <button id="cal-toggle-btn" onclick="toggleCalendar()" class="bg-blue-600 text-white px-6 py-3 rounded-full flex items-center gap-3 font-bold shadow-lg transition-all hover:scale-105 active:scale-95">
+            <h1 class="text-4xl font-black text-slate-800 tracking-tight">Part-Time <span class="text-blue-600">Tracker</span></h1>
+            <button id="cal-toggle-btn" onclick="toggleCalendar()" class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full flex items-center gap-3 font-bold shadow-xl transition-all active:scale-95">
                 <i data-lucide="calendar"></i> <span id="btn-text">OPEN CALENDAR</span>
             </button>
         </div>
 
         <div id="calendar-popup" class="hidden mb-8 bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden animate-pop">
             <div class="p-6 border-b flex justify-between items-center bg-slate-50">
-                <h2 id="month-display" class="text-2xl font-black text-slate-800">Month Year</h2>
-                <div class="flex gap-2">
-                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-200 rounded-lg">‹ Prev</button>
-                    <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-200 rounded-lg">Next ›</button>
+                <h2 id="month-display" class="text-2xl font-black text-slate-800 uppercase tracking-widest">Month Year</h2>
+                <div class="flex gap-4">
+                    <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-200 rounded-lg font-bold">‹ PREV</button>
+                    <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-200 rounded-lg font-bold">NEXT ›</button>
                 </div>
             </div>
             <div class="p-4">
-                <div class="grid grid-cols-7 text-center font-black text-slate-400 text-xs mb-2">
+                <div class="grid grid-cols-7 text-center font-black text-slate-400 text-xs mb-3 tracking-widest">
                     <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
                 </div>
                 <div id="calendar-grid" class="calendar-grid"></div>
             </div>
         </div>
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <input id="f-company" type="text" placeholder="Company Name" class="p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ring-blue-400">
-                <div class="flex flex-col"><label class="text-[10px] font-bold text-slate-400 px-1">APPLIED DATE</label><input id="f-date" type="date" class="p-2 bg-slate-50 border rounded-xl"></div>
-                <div class="flex flex-col"><label class="text-[10px] font-bold text-slate-400 px-1">FOLLOW UP</label><input id="f-follow" type="date" class="p-2 bg-slate-50 border rounded-xl"></div>
-                <div class="flex flex-col"><label class="text-[10px] font-bold text-slate-400 px-1">INTERVIEW</label><input id="f-interview" type="datetime-local" class="p-2 bg-slate-50 border rounded-xl"></div>
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <input id="f-company" type="text" placeholder="Company Name" class="p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 ring-blue-400 font-bold">
+                <div><label class="text-[10px] font-black text-slate-400 ml-1">APPLIED DATE</label><input id="f-date" type="date" class="w-full p-2 bg-slate-50 border rounded-xl"></div>
+                <div><label class="text-[10px] font-black text-slate-400 ml-1">FOLLOW UP</label><input id="f-follow" type="date" class="w-full p-2 bg-slate-50 border rounded-xl"></div>
+                <div><label class="text-[10px] font-black text-slate-400 ml-1">INTERVIEW</label><input id="f-interview" type="datetime-local" class="w-full p-2 bg-slate-50 border rounded-xl"></div>
             </div>
-            <textarea id="f-notes" placeholder="Notes (Max 250 words)..." class="w-full p-4 bg-slate-50 border rounded-xl h-24 mb-4 outline-none focus:ring-2 ring-blue-400"></textarea>
-            <button onclick="saveJob()" id="save-btn" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-all flex justify-center items-center gap-2">
+            <textarea id="f-notes" placeholder="Detailed Status (Max 250 words)..." class="w-full p-4 bg-slate-50 border rounded-xl h-24 mb-4 outline-none focus:ring-2 ring-blue-400 text-sm"></textarea>
+            <button onclick="saveJob()" id="save-btn" class="w-full bg-slate-900 text-white font-black py-4 rounded-2xl hover:bg-blue-600 transition-all flex justify-center items-center gap-2 tracking-widest">
                 <i data-lucide="save"></i> SAVE TO FIREBASE
             </button>
         </div>
 
-        <div id="job-list" class="space-y-4 pb-20"></div>
+        <div id="job-list" class="space-y-4 pb-24"></div>
     </div>
 
-    <div class="w-1/4 bg-white border-l p-6 flex flex-col">
-        <div class="rounded-3xl overflow-hidden shadow-xl mb-6">
-            <img src="https://i.postimg.cc/jjRfNrM3/63445777-1BCC-4A05-ACF6-7AAE2396A4E9.png" class="w-full object-cover">
+    <div class="w-1/4 bg-white border-l p-8 flex flex-col items-center">
+        <div class="w-full rounded-[2rem] overflow-hidden shadow-2xl mb-8 border-4 border-white">
+            <img src="https://i.postimg.cc/jjRfNrM3/63445777-1BCC-4A05-ACF6-7AAE2396A4E9.png" class="w-full h-auto object-cover">
         </div>
-        <div class="p-4 bg-slate-50 rounded-2xl border text-center">
-            <p class="text-xs font-bold text-slate-400">TOTAL APPS</p>
-            <p id="stat-total" class="text-4xl font-black">0</p>
+        <div class="w-full p-6 bg-blue-50 rounded-2xl border border-blue-100 text-center mb-4">
+            <p class="text-xs font-black text-blue-400 uppercase">Total Apps</p>
+            <p id="stat-total" class="text-5xl font-black text-blue-900">0</p>
         </div>
-        <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" class="mt-auto block text-center p-3 text-sm font-bold text-blue-500 border border-blue-100 rounded-xl hover:bg-blue-50">🔗 Open Google Calendar</a>
+        <a href="https://calendar.google.com/calendar/u/0/r" target="_blank" class="text-blue-500 font-bold text-sm hover:underline italic">Open Google Calendar ↗</a>
     </div>
 </div>
 
@@ -88,35 +88,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     let viewDate = new Date();
-    let events = [];
+    let scheduleData = [];
 
     lucide.createIcons();
 
     const IRISH_HOLIDAYS = {
-        "1-1": "New Year's", "2-2": "St Brigid's", "3-17": "St Patrick's☘️", "4-6": "Easter Mon",
-        "5-4": "May Day", "6-1": "June Bank Hol", "8-3": "Aug Bank Hol", "10-26": "Oct Bank Hol", "12-25": "Christmas", "12-26": "St Stephens"
+        "1-1": "New Year's", "3-17": "St Patrick's ☘️", "4-6": "Easter Mon", "5-4": "May Hol", "6-1": "June Hol", "8-3": "Aug Hol", "10-26": "Oct Hol", "12-25": "Christmas", "12-26": "St Stephen's"
     };
 
     window.toggleCalendar = () => {
         const cal = document.getElementById('calendar-popup');
         const btn = document.getElementById('cal-toggle-btn');
-        const txt = document.getElementById('btn-text');
-        
-        if(cal.classList.contains('hidden')) {
-            cal.classList.remove('hidden');
-            btn.classList.replace('bg-blue-600', 'bg-red-500');
-            txt.innerText = "CLOSE CALENDAR";
-            renderCalendar();
-        } else {
-            cal.classList.add('hidden');
-            btn.classList.replace('bg-red-500', 'bg-blue-600');
-            txt.innerText = "OPEN CALENDAR";
-        }
+        const isHidden = cal.classList.toggle('hidden');
+        document.getElementById('btn-text').innerText = isHidden ? "OPEN CALENDAR" : "CLOSE CALENDAR";
+        btn.classList.toggle('bg-blue-600', isHidden);
+        btn.classList.toggle('bg-red-500', !isHidden);
+        if(!isHidden) renderCalendar();
     };
 
     window.saveJob = async () => {
         const company = document.getElementById('f-company').value;
-        if(!company) return alert("Enter Company Name");
+        if(!company) return alert("Please enter Company Name");
         await addDoc(collection(db, "parttime"), {
             company, notes: document.getElementById('f-notes').value,
             appliedDate: document.getElementById('f-date').value,
@@ -139,7 +131,7 @@
         for(let i=0; i<first; i++) grid.innerHTML += `<div class="calendar-day bg-slate-50/50"></div>`;
 
         for(let d=1; d<=days; d++) {
-            const dateStr = `${y}-${m+1}-${d}`;
+            const dateKey = `${y}-${m+1}-${d}`;
             const isToday = new Date().toDateString() === new Date(y, m, d).toDateString();
             const hol = IRISH_HOLIDAYS[`${m+1}-${d}`];
 
@@ -148,56 +140,48 @@
             dayDiv.innerHTML = `<span class="font-black text-slate-400 text-sm">${d}</span>`;
             if(hol) dayDiv.innerHTML += `<span class="holiday-tag">${hol}</span>`;
             
-            // Render saved events for this day
-            events.filter(e => e.date === dateStr).forEach(e => {
+            scheduleData.filter(e => e.date === dateKey).forEach(e => {
                 dayDiv.innerHTML += `<span class="event-tag">${e.title}</span>`;
             });
 
             dayDiv.onclick = async () => {
-                const title = prompt(`Add Event for ${dateStr}:`);
-                if(title) {
-                    await addDoc(collection(db, "schedules"), { title, date: dateStr, createdAt: serverTimestamp() });
-                }
+                const title = prompt(`Add event for ${dateKey}:`);
+                if(title) await addDoc(collection(db, "schedules"), { title, date: dateKey, createdAt: serverTimestamp() });
             };
             grid.appendChild(dayDiv);
         }
     }
 
-    // LOAD EVERYTHING
     onSnapshot(query(collection(db, "parttime"), orderBy('createdAt', 'desc')), (snap) => {
         const list = document.getElementById('job-list');
         list.innerHTML = '';
         document.getElementById('stat-total').innerText = snap.size;
         snap.forEach(d => {
-            const job = d.data();
+            const j = d.data();
             const div = document.createElement('div');
             div.className = "bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4 hover:border-blue-400 transition";
             div.innerHTML = `
                 <div class="flex-1">
-                    <h3 class="font-black text-lg text-slate-800">${job.company}</h3>
-                    <div class="flex gap-4 text-[10px] font-bold text-slate-400 mt-1">
-                        <span>📅 ${job.appliedDate || '--'}</span> <span>🔔 ${job.followUp || '--'}</span> <span>🎤 ${job.interview || '--'}</span>
+                    <h3 class="font-black text-lg text-slate-800">${j.company}</h3>
+                    <div class="flex gap-4 text-[10px] font-bold text-slate-400 mt-1 uppercase">
+                        <span>📅 Applied: ${j.appliedDate || '--'}</span> <span>🔔 Follow: ${j.followUp || '--'}</span> <span>🎤 Int: ${j.interview || '--'}</span>
                     </div>
-                    <p class="text-sm text-slate-600 mt-2 bg-slate-50 p-2 rounded border border-dashed">${job.notes || ''}</p>
+                    <p class="text-sm text-slate-600 mt-2 bg-slate-50 p-3 rounded-lg border border-dashed">${j.notes || ''}</p>
                 </div>
-                <div class="flex gap-2">
-                    <select onchange="updateJob('${d.id}', this.value)" class="p-2 bg-slate-100 rounded-lg text-xs font-bold">
-                        <option value="Pending" ${job.status==='Pending'?'selected':''}>Pending</option>
-                        <option value="Hired" ${job.status==='Hired'?'selected':''}>✅ Hired</option>
-                    </select>
-                    <button onclick="deleteDoc(doc(db, 'parttime', '${d.id}'))" class="text-red-300 hover:text-red-500">✕</button>
-                </div>`;
+                <button onclick="deleteDoc(doc(db, 'parttime', '${d.id}'))" class="text-red-400 hover:text-red-600 p-2">✕</button>`;
             list.appendChild(div);
         });
     });
 
     onSnapshot(collection(db, "schedules"), (snap) => {
-        events = snap.docs.map(d => d.data());
+        scheduleData = snap.docs.map(d => d.data());
         if(!document.getElementById('calendar-popup').classList.contains('hidden')) renderCalendar();
     });
 
     window.changeMonth = (n) => { viewDate.setMonth(viewDate.getMonth() + n); renderCalendar(); };
-    window.updateJob = async (id, s) => await updateDoc(doc(db, "parttime", id), { status: s });
+    window.deleteDoc = deleteDoc;
+    window.doc = doc;
+    window.db = db;
 </script>
 </body>
 </html>
